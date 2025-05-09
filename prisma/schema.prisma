@@ -1,0 +1,18 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model DailyMenu {
+  id          Int      @id @default(autoincrement())
+  date        DateTime @unique @db.Date
+  menuText    String   @db.Text
+  lastUpdated DateTime @default(now()) @db.Timestamptz
+
+  @@map("daily_menus")
+  @@index([date])
+}
