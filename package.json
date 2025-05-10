@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "fetch-menu": "NODE_OPTIONS='--loader ts-node/esm' node src/scripts/fetch-menu.ts"
+    "fetch-menu": "NODE_OPTIONS='--loader ts-node/esm' node src/scripts/fetch-menu.ts",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^6.7.0",
