@@ -1,36 +1,43 @@
 #!/usr/bin/env node
 
 import cron from 'node-cron';
-import { MockMenuFetcher } from '../services/menu-fetcher';
+import { ConfluenceMenuFetcher } from '../services/confluence-menu-fetcher';
 import { MenuFetchError } from '../types/menu';
 import { PrismaMenuStorage } from '../services/menuStorage';
 
 // Create fetcher instance
 // Initialize services
 const menuStorage = new PrismaMenuStorage();
-const menuFetcher = new MockMenuFetcher();
+const menuFetcher = new ConfluenceMenuFetcher();
 
 /**
- * Fetches and stores the daily menu
+ * Fetches and stores menus for the entire week
  */
-async function fetchAndStoreMenu(): Promise<void> {
+async function fetchAndStoreWeeklyMenu(): Promise<void> {
   try {
-    const menu = await menuFetcher.fetchDailyMenu();
-    // Convert menu to string format for storage
-    const menuText = JSON.stringify(menu);
-    await menuStorage.saveMenu(menu.date, menuText);
-    console.info('Successfully fetched and stored menu for', menu.date.toISOString());
+    // Fetch menus for the whole week
+    const menus = await menuFetcher.fetchWeeklyMenu();
+    
+    // Convert menus to string format for storage
+    const menuData = menus.map(menu => ({
+      date: menu.date,
+      menuText: JSON.stringify(menu)
+    }));
+
+    // Store all menus in a single transaction
+    await menuStorage.saveWeeklyMenu(menuData);
+    
+    console.info(`Successfully fetched and stored ${menus.length} menus for the week of ${menus[0].date.toISOString()}`);
   } catch (error) {
     const errorMessage = error instanceof MenuFetchError
-      ? `Menu fetch failed: ${error.message}`
-      : `Unexpected error during menu fetch: ${error}`;
+      ? `Weekly menu fetch failed: ${error.message}`
+      : `Unexpected error during weekly menu fetch: ${error}`;
     
     console.error(errorMessage);
     
-    // TODO: Implement proper error notification
-    // For now, just log to stderr which can be monitored
+    // Error logging for monitoring
     console.error(JSON.stringify({
-      type: 'MENU_FETCH_ERROR',
+      type: 'WEEKLY_MENU_FETCH_ERROR',
       timestamp: new Date().toISOString(),
       error: errorMessage,
       retryable: error instanceof MenuFetchError ? error.retryable : true
@@ -53,14 +60,14 @@ if (require.main === module) {
   console.info(`Schedule: ${CRON_SCHEDULE} (Europe/Berlin)`);
 
   // Schedule the cron job with timezone
-  cron.schedule(CRON_SCHEDULE, fetchAndStoreMenu, {
+  cron.schedule(CRON_SCHEDULE, fetchAndStoreWeeklyMenu, {
     timezone: 'Europe/Berlin',
     scheduled: true
   });
 
   // Also run immediately on startup
-  fetchAndStoreMenu().catch(error => {
-    console.error('Initial menu fetch failed:', error);
+  fetchAndStoreWeeklyMenu().catch(error => {
+    console.error('Initial weekly menu fetch failed:', error);
   });
 
   // Keep the process running
@@ -77,4 +84,4 @@ if (require.main === module) {
 }
 
 // Export for testing
-export { fetchAndStoreMenu, CRON_SCHEDULE };
+export { fetchAndStoreWeeklyMenu, CRON_SCHEDULE };

@@ -1,75 +1,110 @@
 import { type FC } from 'react';
+import { format } from 'date-fns';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
-export interface MenuItem {
-  id: string;
+export interface Meal {
   name: string;
-  description: string;
-  price: number;
   category: string;
+}
+
+export interface Menu {
   date: string;
+  meals: Meal[];
+  metadata: {
+    source: string;
+    fetchedAt: string;
+    validUntil: string;
+  };
 }
 
 interface MenuDisplayProps {
-  items: MenuItem[];
+  menus: Menu[];
   isLoading?: boolean;
   error?: string;
 }
 
-export const MenuDisplay: FC<MenuDisplayProps> = ({ items, isLoading, error }) => {
+export const MenuDisplay: FC<MenuDisplayProps> = ({ menus, isLoading, error }) => {
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-[200px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900"></div>
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <Skeleton key={i} className="h-[400px]" />
+        ))}
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-4 text-center text-red-600 bg-red-100 rounded-lg">
-        {error}
-      </div>
+      <Card className="border-red-200">
+        <CardContent className="p-6">
+          <p className="text-center text-red-600">{error}</p>
+        </CardContent>
+      </Card>
     );
   }
 
-  if (!items.length) {
+  if (!menus.length) {
     return (
-      <div className="p-4 text-center text-gray-600">
-        No menu items available for this date.
-      </div>
+      <Card>
+        <CardContent className="p-6">
+          <p className="text-center text-gray-500">No menus available for this week.</p>
+        </CardContent>
+      </Card>
     );
   }
 
-  const categories = [...new Set(items.map(item => item.category))];
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return format(date, 'EEEE, MMM d');
+  };
+
+  // Sort menus by date
+  const sortedMenus = [...menus].sort((a, b) =>
+    new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
 
   return (
-    <div className="space-y-8">
-      {categories.map(category => (
-        <div key={category} className="space-y-4">
-          <h2 className="text-xl font-semibold capitalize border-b border-gray-200 pb-2">
-            {category}
-          </h2>
-          <div className="grid gap-4 md:grid-cols-2">
-            {items
-              .filter(item => item.category === category)
-              .map(item => (
-                <div
-                  key={item.id}
-                  className="p-4 border rounded-lg hover:shadow-md transition-shadow"
-                >
-                  <div className="flex justify-between items-start">
-                    <h3 className="font-medium">{item.name}</h3>
-                    <span className="text-green-600 font-medium">
-                      €{item.price.toFixed(2)}
-                    </span>
-                  </div>
-                  {item.description && (
-                    <p className="mt-1 text-sm text-gray-600">{item.description}</p>
-                  )}
+    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
+      {sortedMenus.map((menu) => (
+        <Card key={menu.date} className="overflow-hidden">
+          <CardHeader className="pb-3 bg-muted">
+            <CardTitle className="text-lg">{formatDate(menu.date)}</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 space-y-6">
+            {Object.entries(
+              menu.meals.reduce((acc, meal) => {
+                if (!acc[meal.category]) {
+                  acc[meal.category] = [];
+                }
+                acc[meal.category].push(meal);
+                return acc;
+              }, {} as Record<string, Meal[]>)
+            ).map(([category, meals]) => (
+              <div key={category}>
+                <h3 className="font-semibold text-sm mb-2 pb-1 border-b">
+                  {category}
+                </h3>
+                <div className="space-y-2">
+                  {meals.map((meal) => (
+                    <div
+                      key={meal.name}
+                      className="p-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                    >
+                      <p className="text-sm">{meal.name}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
-          </div>
-        </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       ))}
     </div>
   );

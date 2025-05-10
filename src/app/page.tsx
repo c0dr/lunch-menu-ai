@@ -2,90 +2,68 @@
 
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { DatePicker } from '@/components/ui/DatePicker';
-import { MenuDisplay, type MenuItem } from '@/components/ui/MenuDisplay';
+import { MenuDisplay, type Menu, type Meal } from '@/components/ui/MenuDisplay';
 
-function parseMenuText(menuText: string): MenuItem[] {
-  const lines = menuText.split('\n').filter(line => line.trim());
-  const items: MenuItem[] = [];
-  let currentCategory = 'Main';
-  
-  lines.forEach((line, index) => {
-    // Assume lines starting with # are categories
-    if (line.startsWith('#')) {
-      currentCategory = line.replace('#', '').trim();
-      return;
-    }
-    
-    // Assume other lines are items in format: Name - Description - Price
-    const parts = line.split('-').map(part => part.trim());
-    if (parts.length >= 2) {
-      const price = parseFloat(parts[parts.length - 1].replace('€', '')) || 0;
-      const name = parts[0];
-      const description = parts.length > 2 ? parts.slice(1, -1).join(' - ') : '';
-      
-      items.push({
-        id: `${index}`,
-        name,
-        description,
-        price,
-        category: currentCategory,
-        date: format(new Date(), 'yyyy-MM-dd')
-      });
-    }
-  });
-  
-  return items;
+interface ApiMenu {
+  date: string;
+  meals: Meal[];
+  metadata: {
+    source: string;
+    fetchedAt: string;
+    validUntil: string;
+  };
+}
+
+interface ApiResponse {
+  menus: ApiMenu[];
 }
 
 export default function MenuPage() {
-  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [items, setItems] = useState<MenuItem[]>([]);
+  const [weeklyMenus, setWeeklyMenus] = useState<Menu[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | undefined>();
 
   useEffect(() => {
-    async function fetchMenu() {
+    async function fetchWeekMenu() {
       try {
         setIsLoading(true);
         setError(undefined);
         
-        const response = await fetch(`/api/v1/menu?date=${selectedDate}`);
-        
+        const response = await fetch('/api/v1/menu');
         if (!response.ok) {
-          const data = await response.json();
-          throw new Error(data.error || 'Failed to fetch menu');
+          throw new Error('Failed to fetch menus');
         }
 
-        const data = await response.json();
-        const menuItems = parseMenuText(data.menuText);
-        setItems(menuItems);
+        const data = await response.json() as ApiResponse;
+        const menus = data.menus.map((menu) => ({
+          ...menu,
+          date: format(new Date(menu.date), 'yyyy-MM-dd'),
+          metadata: {
+            ...menu.metadata,
+            fetchedAt: new Date(menu.metadata.fetchedAt).toISOString(),
+            validUntil: new Date(menu.metadata.validUntil).toISOString()
+          }
+        }));
+
+        setWeeklyMenus(menus);
       } catch (err) {
-        console.error('Error fetching menu:', err);
-        setError('Could not load the menu. Please try again later.');
-        setItems([]);
+        console.error('Error fetching menus:', err);
+        setError('Could not load the menus. Please try again later.');
+        setWeeklyMenus([]);
       } finally {
         setIsLoading(false);
       }
     }
 
-    fetchMenu();
-  }, [selectedDate]);
+    fetchWeekMenu();
+  }, []);
 
   return (
-    <main className="container mx-auto px-4 py-8 max-w-4xl">
-      <h1 className="text-3xl font-bold mb-8">Daily Menu</h1>
+    <main className="container mx-auto px-4 py-8 max-w-7xl min-h-screen">
+      <h1 className="text-4xl font-bold mb-8 text-center">Weekly Menu</h1>
       
-      <div className="mb-8">
-        <DatePicker
-          selectedDate={selectedDate}
-          onChange={setSelectedDate}
-          isDisabled={isLoading}
-        />
-      </div>
-
       <MenuDisplay
-        items={items}
+        menus={weeklyMenus}
         isLoading={isLoading}
         error={error}
       />

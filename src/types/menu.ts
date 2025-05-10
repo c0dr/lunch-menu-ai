@@ -3,11 +3,11 @@
  */
 export interface MenuFetcher {
   /**
-   * Fetches the daily menu from the source
-   * @returns Promise with the fetched menu data
+   * Fetches menus for the entire week
+   * @returns Promise with an array of menus for each day
    * @throws MenuFetchError if fetching fails
    */
-  fetchDailyMenu(): Promise<Menu>;
+  fetchWeeklyMenu(): Promise<Menu[]>;
 }
 
 /**
@@ -22,15 +22,6 @@ export interface Menu {
 export interface Meal {
   name: string;
   category: MealCategory;
-  price: Price;
-  allergens?: string[];
-  additives?: string[];
-}
-
-export interface Price {
-  students: number;
-  employees: number;
-  guests: number;
 }
 
 export interface MenuMetadata {
