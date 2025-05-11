@@ -123,7 +123,7 @@ export const MenuDisplay: FC<MenuDisplayProps> = ({ menus, isLoading, error }) =
   "mcpServers": {
     "breuni-lunch": {
       "command": "npx",
-      "args": ["mcp-remote", "https://food.simoney.de/endpoint"]
+      "args": ["mcp-remote", "https://food.simoney.de/endpoint", "--transport sse-only"]
     }
   }
 }`}
