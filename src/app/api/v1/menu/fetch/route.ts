@@ -2,8 +2,20 @@ import { NextResponse } from 'next/server';
 import { ConfluenceMenuFetcher } from '../../../../../services/confluence-menu-fetcher';
 import { PrismaMenuStorage } from '../../../../../services/menuStorage';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const authHeader = request.headers.get('x-menu-fetch-password');
+    
+    if (!authHeader || authHeader !== process.env.MENU_FETCH_PASSWORD) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Unauthorized'
+        },
+        { status: 401 }
+      );
+    }
+
     const menuStorage = new PrismaMenuStorage();
     const menuFetcher = new ConfluenceMenuFetcher();
 
